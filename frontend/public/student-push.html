@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Register for push notifications</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 480px; margin: 2rem auto; padding: 0 1rem; }
+    h1 { font-size: 1.25rem; }
+    label { display: block; margin-top: 1rem; font-weight: 600; }
+    input, button { width: 100%; padding: 0.5rem 0.75rem; margin-top: 0.25rem; font-size: 1rem; box-sizing: border-box; }
+    button { background: #1976d2; color: #fff; border: none; cursor: pointer; margin-top: 1rem; }
+    button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .msg { margin-top: 1rem; padding: 0.75rem; border-radius: 4px; }
+    .msg.success { background: #e8f5e9; color: #2e7d32; }
+    .msg.error { background: #ffebee; color: #c62828; }
+    .msg.info { background: #e3f2fd; color: #1565c0; }
+    small { display: block; margin-top: 0.25rem; color: #666; font-size: 0.875rem; }
+  </style>
+</head>
+<body>
+  <h1>Register for push notifications</h1>
+  <p>Enter your Student ID (or email). This must match the <strong>studentIds</strong> you use in the admin when sending notifications.</p>
+
+  <label for="apiBase">API base URL</label>
+  <input id="apiBase" type="url" placeholder="https://yourdomain.com" />
+  <small>Your backend URL with no trailing slash (e.g. https://yourdomain.com)</small>
+
+  <label for="identifier">Your Student ID or email</label>
+  <input id="identifier" type="text" placeholder="e.g. 12345 or student@school.edu" />
+
+  <button id="btn" type="button">Enable push notifications</button>
+  <div id="msg"></div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script>
+    (function() {
+      const apiBaseInput = document.getElementById('apiBase');
+      const identifierInput = document.getElementById('identifier');
+      const btn = document.getElementById('btn');
+      const msgEl = document.getElementById('msg');
+
+      function show(msg, type) {
+        msgEl.textContent = msg;
+        msgEl.className = 'msg ' + (type || 'info');
+      }
+
+      btn.addEventListener('click', async function() {
+        const apiBase = (apiBaseInput.value || '').trim().replace(/\/$/, '');
+        const identifier = (identifierInput.value || '').trim();
+        if (!apiBase || !identifier) {
+          show('Please enter API base URL and your Student ID.', 'error');
+          return;
+        }
+
+        const config = window.STUDENT_PUSH_FIREBASE_CONFIG;
+        const vapidKey = window.STUDENT_PUSH_VAPID_KEY;
+        if (!config || !vapidKey || vapidKey === 'YOUR_VAPID_KEY') {
+          show('Firebase is not configured. Add firebase-config.js (see firebase-config.example.js) with your project config and VAPID key.', 'error');
+          return;
+        }
+
+        btn.disabled = true;
+        show('Requesting permission…', 'info');
+
+        try {
+          if (!firebase.apps.length) firebase.initializeApp(config);
+          const messaging = firebase.messaging();
+          const token = await messaging.getToken({ vapidKey: vapidKey });
+          if (!token) {
+            show('Could not get push token. Allow notifications and try again.', 'error');
+            btn.disabled = false;
+            return;
+          }
+
+          const res = await fetch(apiBase + '/api/register_device.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ identifier: identifier, token: token }),
+          });
+          const data = await res.json().catch(function() { return {}; });
+
+          if (data.ok) {
+            show('You are registered. You will receive push notifications when an admin sends to your ID.', 'success');
+          } else {
+            show(data.error || 'Registration failed.', 'error');
+          }
+        } catch (e) {
+          show(e.message || 'Error: ' + String(e), 'error');
+        }
+        btn.disabled = false;
+      });
+    })();
+  </script>
+</body>
+</html>
