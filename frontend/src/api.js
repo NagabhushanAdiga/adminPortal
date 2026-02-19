@@ -1,4 +1,12 @@
-const getApiUrl = () => import.meta.env.VITE_API_URL ?? '';
+// Backend API base URL (no trailing slash). Set VITE_API_URL in .env and in Vercel for frontend deployment.
+const BACKEND_URL = 'https://admin-portal-ivory-psi.vercel.app';
+
+const getApiUrl = () => {
+  const env = (import.meta.env.VITE_API_URL ?? '').toString().trim();
+  if (env) return env.replace(/\/$/, '');
+  if (import.meta.env.PROD) return BACKEND_URL;
+  return '';
+};
 
 async function request(path, options = {}) {
   const base = getApiUrl().replace(/\/$/, '');
