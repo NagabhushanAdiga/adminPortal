@@ -6,7 +6,10 @@ import { MongoClient } from 'mongodb';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '.env') });
 
-const uri = (process.env.MONGODB_URI || 'mongodb://localhost:27017').trim();
+// In production (e.g. Vercel), never use localhost — require MONGODB_URI
+const isProduction = process.env.VERCEL === '1' || process.env.NODE_ENV === 'production';
+const defaultUri = isProduction ? '' : 'mongodb://localhost:27017';
+const uri = (process.env.MONGODB_URI || defaultUri).trim();
 const dbName = (process.env.DB_NAME || 'adminportal').trim();
 
 let client = null;
@@ -15,7 +18,9 @@ let db = null;
 export async function getDb() {
   if (db) return db;
   if (!uri || uri.includes('<') || uri.includes('xxxxx')) {
-    throw new Error('MONGODB_URI is not set or is a placeholder. Set it in .env or Vercel Environment Variables.');
+    throw new Error(
+      'MONGODB_URI is not set or is a placeholder. Set it in .env or Vercel Environment Variables (Settings → Environment Variables).'
+    );
   }
   client = new MongoClient(uri);
   await client.connect();
