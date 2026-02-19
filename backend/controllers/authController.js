@@ -8,7 +8,11 @@ export async function login(req, res) {
       return res.status(400).json({ ok: false, error: 'Username and password required' });
     }
     const user = await User.findByUsername(username);
-    if (!user || !(await bcrypt.compare(password, user.password_hash))) {
+    if (!user || !user.password_hash) {
+      return res.json({ ok: false, error: 'Invalid username or password' });
+    }
+    const match = await bcrypt.compare(password, user.password_hash);
+    if (!match) {
       return res.json({ ok: false, error: 'Invalid username or password' });
     }
     res.json({
@@ -21,6 +25,8 @@ export async function login(req, res) {
       },
     });
   } catch (err) {
-    res.status(500).json({ ok: false, error: 'Server error' });
+    console.error('[Auth login error]', err);
+    const isDev = process.env.NODE_ENV !== 'production';
+    res.status(500).json({ ok: false, error: isDev ? (err.message || 'Server error') : 'Server error' });
   }
 }

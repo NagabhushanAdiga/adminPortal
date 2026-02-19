@@ -12,8 +12,10 @@ app.use(routes);
 
 // Catch unhandled errors so serverless doesn't hang
 app.use((err, req, res, next) => {
-  console.error(err);
-  res.status(500).json({ ok: false, error: 'Server error' });
+  console.error('[Server error]', err);
+  const isDev = process.env.NODE_ENV !== 'production';
+  const message = isDev && err?.message ? err.message : 'Server error';
+  res.status(500).json({ ok: false, error: message });
 });
 
 // Only listen when running locally (not on Vercel serverless)
