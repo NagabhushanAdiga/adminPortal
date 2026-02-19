@@ -21,6 +21,7 @@ import {
   DialogContentText,
   DialogActions,
   CircularProgress,
+  Collapse,
 } from '@mui/material';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import FolderOpenIcon from '@mui/icons-material/FolderOpen';
@@ -30,6 +31,9 @@ import SaveIcon from '@mui/icons-material/Save';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import EditNoteIcon from '@mui/icons-material/EditNote';
 import CloseIcon from '@mui/icons-material/Close';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import RefreshIcon from '@mui/icons-material/Refresh';
 import { api } from '../api';
 
 function getColumns(data) {
@@ -62,6 +66,9 @@ export default function Import() {
   const [showManualImport, setShowManualImport] = useState(false);
   const [loadingPreview, setLoadingPreview] = useState(false);
   const [loadingSave, setLoadingSave] = useState(false);
+  const [savedData, setSavedData] = useState([]);
+  const [savedDataLoading, setSavedDataLoading] = useState(false);
+  const [savedDataOpen, setSavedDataOpen] = useState(false);
 
   const previewColumns = useMemo(() => {
     if (!previewData || previewData.length === 0) return [];
@@ -72,6 +79,26 @@ export default function Import() {
     const start = previewPage * previewRowsPerPage;
     return previewData.slice(start, start + previewRowsPerPage);
   }, [previewData, previewPage, previewRowsPerPage]);
+
+  const loadSavedData = async () => {
+    setSavedDataLoading(true);
+    try {
+      const data = await api.importList();
+      if (data.ok && Array.isArray(data.rows)) setSavedData(data.rows);
+      else setSavedData([]);
+    } catch {
+      setSavedData([]);
+    } finally {
+      setSavedDataLoading(false);
+    }
+  };
+
+  const savedColumns = useMemo(() => {
+    if (!savedData.length) return [];
+    const keySet = new Set();
+    savedData.forEach((row) => Object.keys(row).filter((k) => k !== '_rowId').forEach((k) => keySet.add(k)));
+    return Array.from(keySet);
+  }, [savedData]);
 
 
   const handleClearInput = () => {
@@ -131,6 +158,7 @@ export default function Import() {
       setPreviewData(null);
       setPreviewPage(0);
       handleClearInput();
+      loadSavedData();
     } catch (err) {
       setSnackbar({ open: true, message: err.message || 'Network error. Check API URL and CORS.' });
     } finally {
@@ -396,6 +424,92 @@ export default function Import() {
             />
         </Card>
       )}
+
+      <Card
+        elevation={0}
+        sx={{
+          mb: 3,
+          borderRadius: 2,
+          border: '1px solid',
+          borderColor: 'divider',
+          overflow: 'hidden',
+        }}
+      >
+        <Box
+          sx={{
+            px: 3,
+            py: 2,
+            borderBottom: 1,
+            borderColor: 'divider',
+            background: 'linear-gradient(180deg, #f5f5f5 0%, #fafafa 100%)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: 2,
+          }}
+        >
+          <Button
+            startIcon={savedDataOpen ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            onClick={() => {
+              setSavedDataOpen((o) => !o);
+              if (!savedDataOpen && savedData.length === 0 && !savedDataLoading) loadSavedData();
+            }}
+            sx={{ textTransform: 'none', fontWeight: 600 }}
+          >
+            Saved data in database
+          </Button>
+          <Button
+            size="small"
+            variant="outlined"
+            startIcon={savedDataLoading ? <CircularProgress size={16} color="inherit" /> : <RefreshIcon />}
+            onClick={loadSavedData}
+            disabled={savedDataLoading}
+            sx={{ textTransform: 'none' }}
+          >
+            Refresh
+          </Button>
+        </Box>
+        <Collapse in={savedDataOpen}>
+          <CardContent sx={{ p: 0 }}>
+            {savedDataLoading && savedData.length === 0 ? (
+              <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
+                <CircularProgress size={28} />
+              </Box>
+            ) : savedData.length === 0 ? (
+              <Box sx={{ py: 4, textAlign: 'center' }}>
+                <Typography color="text.secondary">No saved records yet. Save imported data above.</Typography>
+              </Box>
+            ) : (
+              <Table size="small" sx={{ minWidth: 400 }}>
+                <TableHead>
+                  <TableRow sx={{ bgcolor: 'grey.50' }}>
+                    {savedColumns.map((col) => (
+                      <TableCell key={col} sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                        {col}
+                      </TableCell>
+                    ))}
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {savedData.slice(0, 20).map((row, idx) => (
+                    <TableRow key={row.id || idx} hover>
+                      {savedColumns.map((col) => (
+                        <TableCell key={col}>{getCellValue(row[col])}</TableCell>
+                      ))}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+            {savedData.length > 20 && (
+              <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+                Showing first 20 of {savedData.length} records.
+              </Typography>
+            )}
+          </CardContent>
+        </Collapse>
+      </Card>
 
       <Snackbar
         open={snackbar.open}

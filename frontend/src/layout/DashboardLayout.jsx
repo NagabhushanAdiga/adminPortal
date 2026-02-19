@@ -23,6 +23,7 @@ import {
   Button,
   useTheme,
   useMediaQuery,
+  Chip,
 } from '@mui/material';
 import MenuIcon from '@mui/icons-material/Menu';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
@@ -30,8 +31,11 @@ import DashboardIcon from '@mui/icons-material/Dashboard';
 import UploadFileIcon from '@mui/icons-material/UploadFile';
 import NotificationsIcon from '@mui/icons-material/Notifications';
 import NotificationsActiveIcon from '@mui/icons-material/NotificationsActive';
+import PeopleIcon from '@mui/icons-material/People';
+import AssessmentIcon from '@mui/icons-material/Assessment';
 import LogoutIcon from '@mui/icons-material/Logout';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 
 const DRAWER_WIDTH = 260;
 
@@ -39,12 +43,15 @@ const menuItems = [
   { path: '/dashboard', label: 'Dashboard', icon: <DashboardIcon /> },
   { path: '/import', label: 'Import', icon: <UploadFileIcon /> },
   { path: '/notification', label: 'Send notification', icon: <NotificationsIcon /> },
+  { path: '/users', label: 'Users', icon: <PeopleIcon /> },
+  { path: '/reports', label: 'Reports', icon: <AssessmentIcon /> },
 ];
 
 export default function DashboardLayout() {
   const [open, setOpen] = useState(false);
   const [anchorEl, setAnchorEl] = useState(null);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+  const [apiConnected, setApiConnected] = useState(null);
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -54,6 +61,12 @@ export default function DashboardLayout() {
   useEffect(() => {
     if (!isMobile) setOpen(true);
   }, [isMobile]);
+
+  useEffect(() => {
+    let cancelled = false;
+    api.health().then((d) => { if (!cancelled) setApiConnected(Boolean(d.ok && d.connected)); }).catch(() => { if (!cancelled) setApiConnected(false); });
+    return () => { cancelled = true; };
+  }, []);
 
   const handleDrawerToggle = () => setOpen(!open);
   const handleMenuOpen = (e) => setAnchorEl(e.currentTarget);
@@ -136,6 +149,17 @@ export default function DashboardLayout() {
         ))}
       </List>
       <Divider />
+      {apiConnected !== null && (
+        <Box sx={{ px: 2, py: 1.5 }}>
+          <Chip
+            size="small"
+            label={apiConnected ? 'API connected' : 'API offline'}
+            color={apiConnected ? 'success' : 'default'}
+            variant={apiConnected ? 'filled' : 'outlined'}
+            sx={{ fontSize: '0.7rem' }}
+          />
+        </Box>
+      )}
     </>
   );
 

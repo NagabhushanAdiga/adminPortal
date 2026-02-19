@@ -16,6 +16,22 @@ export async function findByUsername(username) {
   };
 }
 
+export async function list() {
+  const db = await getDb();
+  const docs = await db
+    .collection('users')
+    .find({}, { projection: { password_hash: 0 } })
+    .sort({ username: 1 })
+    .toArray();
+  return docs.map((d) => ({
+    id: d._id.toString(),
+    username: d.username,
+    name: d.name ?? '',
+    role: d.role ?? 'Admin',
+    createdAt: d.updatedAt || d.createdAt,
+  }));
+}
+
 export async function upsertAdmin({ username, passwordHash, name, role }) {
   const db = await getDb();
   await db.collection('users').updateOne(

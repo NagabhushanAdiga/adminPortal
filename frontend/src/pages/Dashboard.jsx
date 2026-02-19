@@ -9,6 +9,7 @@ import {
   CircularProgress,
   Button,
   Chip,
+  Alert,
 } from '@mui/material';
 import TrendingUp from '@mui/icons-material/TrendingUp';
 import People from '@mui/icons-material/People';
@@ -39,6 +40,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [stats, setStats] = useState(null);
+  const [statsError, setStatsError] = useState(null);
   const [recentNotifications, setRecentNotifications] = useState([]);
   const [loading, setLoading] = useState(true);
   const [notifLoading, setNotifLoading] = useState(true);
@@ -47,12 +49,21 @@ export default function Dashboard() {
 
   useEffect(() => {
     let cancelled = false;
+    setStatsError(null);
     api.getDashboardStats()
       .then((data) => {
-        if (!cancelled && data.ok && data.stats) setStats(data.stats);
+        if (!cancelled && data.ok && data.stats) {
+          setStats(data.stats);
+        } else if (!cancelled) {
+          setStats(null);
+          setStatsError('No stats from backend');
+        }
       })
-      .catch(() => {
-        if (!cancelled) setStats({ totalStudents: 0, enrolledThisMonth: 0, activeCourses: 0, attendanceRate: '0%' });
+      .catch((err) => {
+        if (!cancelled) {
+          setStats(null);
+          setStatsError(err.message || 'Failed to load dashboard stats');
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -77,6 +88,17 @@ export default function Dashboard() {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 280 }}>
         <CircularProgress size={40} sx={{ color: 'primary.main' }} />
+      </Box>
+    );
+  }
+
+  if (statsError) {
+    return (
+      <Box sx={{ width: '100%', maxWidth: '100%', overflow: 'auto' }}>
+        <Typography variant="h6" gutterBottom>Dashboard</Typography>
+        <Alert severity="warning" sx={{ mt: 2 }}>
+          {statsError}. Check that the backend is running and connected to MongoDB.
+        </Alert>
       </Box>
     );
   }

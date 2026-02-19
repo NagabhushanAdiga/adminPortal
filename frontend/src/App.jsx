@@ -8,6 +8,8 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Import from './pages/Import';
 import Notification from './pages/Notification';
+import Users from './pages/Users';
+import Reports from './pages/Reports';
 
 const theme = createTheme({
   palette: {
@@ -36,6 +38,8 @@ function App() {
               <Route path="dashboard" element={<Dashboard />} />
               <Route path="import" element={<Import />} />
               <Route path="notification" element={<Notification />} />
+              <Route path="users" element={<Users />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
             <Route path="*" element={<Navigate to="/dashboard" replace />} />
           </Routes>

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Box,
@@ -21,6 +21,7 @@ import School from '@mui/icons-material/School';
 import Group from '@mui/icons-material/Group';
 import Security from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../api';
 
 const infoPoints = [
   { icon: <Group />, title: 'Send to students', text: 'Import student IDs and messages via JSON, then send push notifications to their devices.' },
@@ -34,12 +35,34 @@ export default function Login() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [backendOk, setBackendOk] = useState(null);
+  const [setupLoading, setSetupLoading] = useState(false);
+  const [setupMessage, setSetupMessage] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
   const theme = useTheme();
   const isSmall = useMediaQuery(theme.breakpoints.down('md'));
+
+  useEffect(() => {
+    let cancelled = false;
+    api.health().then((d) => { if (!cancelled) setBackendOk(d.ok && d.connected); }).catch(() => { if (!cancelled) setBackendOk(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  const handleRunSetup = async () => {
+    setSetupMessage('');
+    setSetupLoading(true);
+    try {
+      const data = await api.setup();
+      setSetupMessage(data.message || 'Default admin created. Use username: admin, password: admin123');
+    } catch (e) {
+      setSetupMessage(e.message || 'Setup failed');
+    } finally {
+      setSetupLoading(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -198,9 +221,35 @@ export default function Login() {
                 {loading ? 'Signing in...' : 'Sign In'}
               </Button>
             </form>
-            <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-              Call GET /api/setup once to create default admin (admin / admin123)
-            </Typography>
+            {backendOk === false && (
+              <Alert severity="warning" sx={{ mt: 2 }}>
+                Backend unreachable. Check VITE_API_URL and that the API is deployed and running.
+              </Alert>
+            )}
+            {backendOk === true && (
+              <Typography variant="caption" color="text.secondary" display="block" textAlign="center" sx={{ mt: 1 }}>
+                Backend connected
+              </Typography>
+            )}
+            <Box sx={{ mt: 2, textAlign: 'center' }}>
+              <Typography variant="caption" color="text.secondary" display="block">
+                No admin yet? Create default admin (admin / admin123):
+              </Typography>
+              <Button
+                size="small"
+                variant="text"
+                onClick={handleRunSetup}
+                disabled={setupLoading || backendOk !== true}
+                sx={{ mt: 0.5, textTransform: 'none' }}
+              >
+                {setupLoading ? 'Creating...' : 'Run setup'}
+              </Button>
+              {setupMessage && (
+                <Typography variant="caption" color="primary" display="block" sx={{ mt: 0.5 }}>
+                  {setupMessage}
+                </Typography>
+              )}
+            </Box>
           </CardContent>
         </Card>
       </Box>
