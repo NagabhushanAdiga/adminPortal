@@ -199,7 +199,7 @@ export default function Login() {
               </Button>
             </form>
             <Typography variant="caption" color="text.secondary" display="block" textAlign="center">
-              Run api/setup.php once to create admin (admin / admin123)
+              Call GET /api/setup once to create default admin (admin / admin123)
             </Typography>
           </CardContent>
         </Card>
