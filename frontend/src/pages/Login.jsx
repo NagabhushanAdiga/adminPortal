@@ -21,7 +21,7 @@ import School from '@mui/icons-material/School';
 import Group from '@mui/icons-material/Group';
 import Security from '@mui/icons-material/Security';
 import { useAuth } from '../context/AuthContext';
-import { api } from '../api';
+import { api, getApiUrl } from '../api';
 
 const infoPoints = [
   { icon: <Group />, title: 'Send to students', text: 'Import student IDs and messages via JSON, then send push notifications to their devices.' },
@@ -47,7 +47,11 @@ export default function Login() {
 
   useEffect(() => {
     let cancelled = false;
-    api.health().then((d) => { if (!cancelled) setBackendOk(d.ok && d.connected); }).catch(() => { if (!cancelled) setBackendOk(false); });
+    // Use ping first (no DB); then health confirms MongoDB. If ping fails, backend is unreachable.
+    api.ping().then(() => {
+      if (cancelled) return;
+      api.health().then((d) => { if (!cancelled) setBackendOk(d.ok && d.connected); }).catch(() => { if (!cancelled) setBackendOk(true); });
+    }).catch(() => { if (!cancelled) setBackendOk(false); });
     return () => { cancelled = true; };
   }, []);
 
@@ -223,7 +227,10 @@ export default function Login() {
             </form>
             {backendOk === false && (
               <Alert severity="warning" sx={{ mt: 2 }}>
-                Backend unreachable. Check VITE_API_URL and that the API is deployed and running.
+                Backend unreachable. Ensure the API is deployed at the URL below and CORS allows this origin. In Vercel (frontend), set env <strong>VITE_API_URL</strong> to your backend URL, then redeploy.
+                <Typography component="span" variant="caption" display="block" sx={{ mt: 1, wordBreak: 'break-all' }}>
+                  Calling: {getApiUrl() || '(no base URL)'}/api/ping
+                </Typography>
               </Alert>
             )}
             {backendOk === true && (

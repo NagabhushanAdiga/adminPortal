@@ -6,7 +6,7 @@ import routes from './routes/index.js';
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+app.use(cors({ origin: true, optionsSuccessStatus: 200 }));
 app.use(express.json());
 app.use(routes);
 

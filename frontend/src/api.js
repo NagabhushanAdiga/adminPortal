@@ -33,6 +33,11 @@ async function request(path, options = {}) {
 export { getApiUrl };
 
 export const api = {
+  /** Check if backend is reachable (no DB). Use for "Backend unreachable" message. */
+  async ping() {
+    return request('api/ping');
+  },
+
   /** Check backend health (MongoDB connected) */
   async health() {
     return request('api/health');

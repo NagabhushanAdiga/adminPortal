@@ -1,5 +1,10 @@
 import { getDb } from '../db.js';
 
+/** Lightweight check: server is reachable (no DB). Use for "backend unreachable" detection. */
+export async function ping(req, res) {
+  res.json({ ok: true });
+}
+
 export async function checkHealth(req, res) {
   try {
     const db = await getDb();

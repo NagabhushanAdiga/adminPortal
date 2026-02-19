@@ -11,6 +11,7 @@ import * as healthController from '../controllers/healthController.js';
 const router = Router();
 
 router.get('/', (req, res) => res.json({ ok: true, message: 'Admin Portal API', docs: '/api/health' }));
+router.get('/api/ping', healthController.ping);
 router.get('/api/health', healthController.checkHealth);
 router.use('/api', setupRoutes);
 router.use('/api', authRoutes);
